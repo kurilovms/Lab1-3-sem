@@ -11,8 +11,36 @@ using namespace std;
 
 class SetOfPoints{ // родительский класс - некоторое множество рациональных точек
 public:
-    virtual bool contains(int p) { // метод, проверяющий, есть ли точка в данном множестве
-        return false;
+    virtual bool contains(int p) = 0; // метод, проверяющий, есть ли точка в данном множестве
+};
+
+class Intersected: public SetOfPoints{
+private:
+    SetOfPoints &set1, &set2;
+public:
+    Intersected(SetOfPoints &set1, SetOfPoints &set2): set1(set1), set2(set2) {};
+    bool contains(int p) override {
+        return set1.contains(p) && set2.contains(p);
+    }
+};
+
+class United: public SetOfPoints{
+private:
+    SetOfPoints &set1, &set2;
+public:
+    United(SetOfPoints &set1, SetOfPoints &set2): set1(set1), set2(set2) {};
+    bool contains(int p) override {
+        return set1.contains(p) || set2.contains(p);
+    }
+};
+
+class Subtracted: public SetOfPoints{
+private:
+    SetOfPoints &set1, &set2;
+public:
+    Subtracted(SetOfPoints &set1, SetOfPoints &set2): set1(set1), set2(set2) {};
+    bool contains(int p) override {
+        return set1.contains(p) && !set2.contains(p);
     }
 };
 
@@ -54,6 +82,26 @@ public:
     }
 };
 
+class Interval: public SetOfPoints{ //дочерний класс - интервал
+private:
+    int end, begin; // границы интервала
+public:
+    Interval(int begin, int end): end(end), begin (begin){};
+    bool contains(int p) override { // перезаписанный метод, проверяющий, есть ли точка в данном множестве
+        return (p < end && p > begin);
+    }
+};
+
+/*
+class SegmentNoPoints: public SetOfPoints{ // дочерний класс - отрезок без конечного набора точек
+private:
+    SetOfPoints &seg, &setof;
+public:
+    SegmentNoPoints(SetOfPoints &seg, SetOfPoints &setof): seg(seg), setof(setof) {}; // конструктор
+    bool contains(int p) override { // перезаписанный метод, проверяющий, есть ли точка в данном множестве
+        return seg.contains(p) && !setof.contains(p);
+    }
+};
 
 class SegmentNoPoints: public Segment{ // дочерний класс - отрезок без конечного набора точек
 private:
@@ -66,17 +114,15 @@ public:
     }
 };
 
-
-class Interval: public SetOfPoints{ //дочерний класс - интервал
+class IntervalNoPoints: public SetOfPoints{ // дочерний класс - отрезок без конечного набора точек
 private:
-    int end, begin; // границы интервала
+    SetOfPoints &inter, &setof;
 public:
-    Interval(int begin, int end): end(end), begin (begin){};
+    IntervalNoPoints(SetOfPoints &inter, SetOfPoints &setof): inter(inter), setof(setof) {}; // конструктор
     bool contains(int p) override { // перезаписанный метод, проверяющий, есть ли точка в данном множестве
-        return (p < end && p > begin);
+        return inter.contains(p) && !setof.contains(p);
     }
 };
-
 
 class IntervalNoPoints: public Interval{ // дочерний класс - интервал без конечного набора точек
 private:
@@ -88,6 +134,7 @@ public:
         return (Interval::contains(p) && !points.contains(p));
     }
 };
+*/
 
 float probability(SetOfPoints &set, int min, int max, int tests){ // функция для подсчета вероятности выбора точки из заданного множества set, tests - число испытаний
     auto x = chrono::duration_cast<chrono::seconds>(chrono::system_clock::now().time_since_epoch()).count();
@@ -102,18 +149,16 @@ float probability(SetOfPoints &set, int min, int max, int tests){ // функц�
     return luck / tests;
 }
 
-
-
-
 int main() {
-    auto points = Points();
-    while (points.get_number() < 18){
+    Points points = Points();
+    Segment seg = Segment(0,39);
+    while (points.get_number() < 20){
         auto y = chrono::duration_cast<chrono::seconds>(chrono::system_clock::now().time_since_epoch()).count();
         default_random_engine rng(y);
         uniform_int_distribution<int> dstrb(0, 39);
         points.append(dstrb(rng));
     }
-    auto set_of_points = SegmentNoPoints(0,39,points);
+    Subtracted set_of_points = Subtracted(seg, points);
     for (int t = 1; t < 1e5; t++){
         fstream inOut;
         inOut.open("file.txt",ios::app);
